@@ -27,6 +27,7 @@
 				})
 				.on('error', err => {
 					// not available
+					console.log(err);
 					resolve( {id: occupantID, me: false} );
 				});
 		});
@@ -37,6 +38,7 @@
 		let position = 0;
 
 		let occupant = await tryPosition(position, roomURL)
+		// if error is not nil, display here
 		while (!occupant.me) {
 			occupants.push(occupant);
 			position += 1;
@@ -44,7 +46,7 @@
 		}
 		occupants.push(occupant);
 
-		console.log(occupants);
+		return occupants;
 	}
 
 	const generateID = (position, roomURL) => {
@@ -64,13 +66,21 @@
 			console.log(err);
 		});
 	
-	connectToRoom(roomURL);
+	occupants = connectToRoom(roomURL);
 </script>
 
 <div>
-	{#each occupants as occupant}
-		<Video id={occupant} />
-	{/each}
+	{#await occupants}
+		<p>waiting...</p>
+	{:then occupants}
+		
+		{#each occupants as occupant}
+			<Video id={occupant.id} me={occupant.me }/>
+		{/each}
+		
+	{:catch error}
+		<p style="color: red">{error.message}</p>
+	{/await}
 </div>
 
 <style>
