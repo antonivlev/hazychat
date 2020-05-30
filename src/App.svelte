@@ -3,21 +3,14 @@
 
 	import Video from './components/Video.svelte'
 
-	if (window.location.pathname === '/') {
-		window.history.pushState('', '', '/'+Math.random().toString(36).substring(2, 12));
-	}
-
-	const roomURL =  window.location.pathname;
-	let occupants = [];
-
-	const server = {
-		host: 'localhost',
-		port: '9000',
-		path: '/myapp'
+	const generateID = (position, roomURL) => {
+		const rng = seedrandom(roomURL+position);
+		const id = rng();
+		return id.toString(36).substring(2, 12);
 	}
 
 	// Tries to connect to server at position. Creates peer if position available.
-	const tryPosition = async (position, roomURL) => {
+	const tryPosition = async (position, roomURL, server) => {
 		return await new Promise( (resolve, reject) => {
 			const occupantID = generateID(position, roomURL);
 			const peer = new Peer(occupantID, server)
@@ -37,27 +30,34 @@
 		});
 	}
 
-	const connectToRoom = async (roomURL) => {
+	const connectToRoom = async (roomURL, server) => {
 		let occupants = [];
 		let position = 0;
 
-		let occupant = await tryPosition(position, roomURL)
+		let occupant = await tryPosition(position, roomURL, server)
 		// if error is not nil, display here
 		while (!occupant.me) {
 			occupants.push(occupant);
 			position += 1;
-			occupant = await tryPosition(position, roomURL);
+			occupant = await tryPosition(position, roomURL, server);
 		}
 		occupants.push(occupant);
 
 		return occupants;
 	}
 
-	const generateID = (position, roomURL) => {
-		const rng = seedrandom(roomURL+position);
-		const id = rng();
-		return id.toString(36).substring(2, 12);
+
+	if (window.location.pathname === '/') {
+		window.history.pushState('', '', '/'+Math.random().toString(36).substring(2, 12));
 	}
+
+	const roomURL =  window.location.pathname;
+	const server = {
+		host: 'localhost',
+		port: '9000',
+		path: '/myapp'
+	}
+	let occupants = [];
 
 	let id0 = generateID(0, roomURL)
 	const peer0 = new Peer(id0, server)
@@ -69,8 +69,8 @@
 			// not available
 			console.log(err);
 		});
-	
-	occupants = connectToRoom(roomURL);
+
+	occupants = connectToRoom(roomURL, server);
 </script>
 
 <div>
@@ -79,7 +79,7 @@
 	{:then occupants}
 		
 		{#each occupants as occupant}
-			<Video id={occupant.id} me={occupant.me }/>
+			<Video id={occupant.id} me={occupant.me}/>
 		{/each}
 		
 	{:catch error}
