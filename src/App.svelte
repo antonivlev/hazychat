@@ -7,10 +7,8 @@
 		window.history.pushState('', '', '/'+Math.random().toString(36).substring(2, 12));
 	}
 
-	let state = {
-		roomURL: window.location.pathname,
-		occupants: [],
-	}
+	const roomURL =  window.location.pathname;
+	let occupants = [];
 
 	const server = {
 		host: 'localhost',
@@ -18,47 +16,59 @@
 		path: '/myapp'
 	}
 
-	// inserts current user at the first available spot in the room
-	// inserts other users into state as it goes through them
-	const connectToRoom = (state) => {
-		let occupantCount = 0;
-		let occupantID = generateID(occupantCount, state.roomURL);
-		
-		while (isSomeoneThere(occupantID)) {
-			state.occupants = [...state.occupants, generateID(occupantCount, state.roomURL)]; 
-			occupantCount += 1;
-			occupantID = generateID(occupantCount, state.roomURL);
-
-			if (occupantCount > 6) {
-				break;
-			}
-		}
-		return state;
+	// Tries to connect to server at position. Creates peer if position available.
+	const tryPosition = async (position, roomURL) => {
+		return await new Promise( (resolve, reject) => {
+			const occupantID = generateID(position, roomURL);
+			const peer = new Peer(occupantID, server)
+				.on('open', id => {
+					// available
+					resolve( {id: occupantID, me: true} );
+				})
+				.on('error', err => {
+					// not available
+					resolve( {id: occupantID, me: false} );
+				});
+		});
 	}
 
-	const generateID = (occupantCount, roomURL) => {
-		const rng = seedrandom(roomURL+occupantCount);
+	const connectToRoom = async (roomURL) => {
+		let occupants = [];
+		let position = 0;
+
+		let occupant = await tryPosition(position, roomURL)
+		while (!occupant.me) {
+			occupants.push(occupant);
+			position += 1;
+			occupant = await tryPosition(position, roomURL);
+		}
+		occupants.push(occupant);
+
+		console.log(occupants);
+	}
+
+	const generateID = (position, roomURL) => {
+		const rng = seedrandom(roomURL+position);
 		const id = rng();
 		return id.toString(36).substring(2, 12);
 	}
 
-	const isSomeoneThere = (occupantID) => {
-		return true;
-	}
-
-	state = connectToRoom(state);
-
-	const peer1 = new Peer(generateID(0, state.roomURL), server)
-		.on('open', id => console.log('peer1 ', id))
-		.on('error', err => console.log('peer1 error ', err));
+	let id0 = generateID(0, roomURL)
+	const peer0 = new Peer(id0, server)
+		.on('open', id => {
+			// available
+			console.log(id);
+		})
+		.on('error', err => {
+			// not available
+			console.log(err);
+		});
 	
-	const peer2 = new Peer(generateID(0, state.roomURL), server)
-		.on('open', id => console.log('peer2 ', id))
-		.on('error', err => console.log('peer2 error ', err));	
+	connectToRoom(roomURL);
 </script>
 
 <div>
-	{#each state.occupants as occupant}
+	{#each occupants as occupant}
 		<Video id={occupant} />
 	{/each}
 </div>
