@@ -22,13 +22,17 @@
 			const occupantID = generateID(position, roomURL);
 			const peer = new Peer(occupantID, server)
 				.on('open', id => {
-					// available
+					// id available
 					resolve( {id: occupantID, me: true} );
 				})
 				.on('error', err => {
-					// not available
-					console.log(err);
-					resolve( {id: occupantID, me: false} );
+					if (err.message.includes('is taken')) {
+						// id not available
+						resolve( {id: occupantID, me: false} );
+					} else {
+						// other error
+						reject( {message: err + ' position: ' + position + ', id: ' + occupantID} );
+					}
 				});
 		});
 	}
@@ -79,7 +83,7 @@
 		{/each}
 		
 	{:catch error}
-		<p style="color: red">{error.message}</p>
+		<p>{error.message}</p>
 	{/await}
 </div>
 
