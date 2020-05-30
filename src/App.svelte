@@ -79,7 +79,7 @@
 	{:then occupants}
 		
 		{#each occupants as occupant}
-			<Video id={occupant.id} me={occupant.me}/>
+			<Video id={occupant.id} me={occupant.me} on:incoming={e => occupants = [...occupants, e.detail]}/>
 		{/each}
 		
 	{:catch error}
