@@ -2,6 +2,7 @@
 	import seedrandom from 'seedrandom';
 
 	import Video from './components/Video.svelte'
+	import Test from './components/Test.svelte'
 
 	const generateID = (position, roomURL) => {
 		const rng = seedrandom(roomURL+position);
@@ -32,10 +33,24 @@
 		});
 	}
 
+	const callOccupant = async (myPeer, myStream, id) => {
+		return await new Promise( (resolve, reject) => {
+			myPeer.call(id, myStream)
+				.on('stream', (remoteStream) => {
+					resolve(remoteStream);
+				})
+				.on('error', err => {
+					console.log(err);
+					reject({});
+				});
+		});
+	}
+
 	const connectToRoom = async (roomURL, server) => {
 		let occupants = [];
 		let position = 0;
 
+		// todo: make try position recursive, get peer at the end
 		let occupant = await tryPosition(position, roomURL, server)
 		// if error is not nil, display here
 		while (!occupant.me) {
@@ -45,45 +60,38 @@
 		}
 		occupants.push(occupant);
 
-		callThese( occupants.filter(o => !o.me) );
+		// call everyone
+		occupants.filter(occ => !occ.me).map( occ => {
+			const call = myPeer.call(occ.id, myStream);
+			call.on( 'stream', remoteStream => addCallerStream(occ.id, remoteStream) );
+		});
 
 		return occupants;
-	}
-
-	const callThese = (occupants) => {
-		occupants.map( dude => {
-			console.log('calling', dude.id);
-			const call = myPeer.call(dude.id, myStream);
-			// call.on('stream', (remoteStream) => {
-			// 	//console.log(remoteStream);
-			// 	addCallerStream(dude.id, remoteStream);
-			// });
-		})
 	}
 
 	const setupPeer = async (peer) => {
 		const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 
+		// setup call answering behaviour
 		peer.on('call', call => {
-			console.log(call.peer, 'called me');
 			call.answer(stream);
-			call.on( 'stream', async remoteStream => addCallerStream(call.peer, remoteStream) );
+			call.on( 'stream', remoteStream => addCallerStream(call.peer, remoteStream) );
 		});
 
 		return stream;
 	}
 
 	const addCallerStream = async (id, stream) => {
+		stream.onremovetrack = () => {
+			console.log('track rmved');
+		}
+
 		const currentOccupants = await occupants;
 		
-		const currentCaller = currentOccupants.find(occ => occ.id === id);
-
-		// if occupant exists, update stream
-		if (currentCaller) {
-			// console.log(currentOccupants);
-			currentCaller.stream = stream;
+		const exisitngCaller = currentOccupants.find(occ => occ.id === id);
+		if (exisitngCaller) {
+			exisitngCaller.stream = stream;
 			occupants = [...currentOccupants];
-			//console.log(occupants);
 			return;
 		}
 
@@ -109,12 +117,13 @@
 </script>
 
 <div>
+	<!-- <Test /> -->
 	{#await occupants}
 		<p>waiting...</p>
 	{:then occupants}
 		
 		{#each occupants as occupant}
-			<Video id={occupant.id} me={occupant.me} stream={occupant.stream}/>
+			<Video id={occupant.id} me={occupant.me} stream={occupant.stream} />
 		{/each}
 		
 	{:catch error}

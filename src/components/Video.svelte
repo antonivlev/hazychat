@@ -1,27 +1,26 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	import { onMount } from 'svelte';
-
-	let addStreamToVid = (stream) => {
-		if (stream) {
-			let vid = document.querySelector('#'+id+' video');
-			vid.srcObject = stream;
-			vid.onloadedmetadata = () => vid.play();
-		}
-	}
+	import { onMount, afterUpdate } from 'svelte';
 
 	export let id = 'some-id';	
 	export let me = false;
-	export let stream = {};
+	export let stream;
 
+	let vid;
 	onMount(() => {
-		addStreamToVid(stream);
+		vid.srcObject = stream;
+		vid.onloadedmetadata = () => vid.play();
+	});
+
+	afterUpdate(() => {
+		vid.srcObject = stream;
+		vid.onloadedmetadata = () => vid.play();
 	});
 </script>
 
 <div id={id} class={me ? 'me' : ''}>
 	{id}
-	<video muted={me ? true : false}></video>
+	<video bind:this={vid} muted={me ? true : false}></video>
 </div>
 
 <style>
