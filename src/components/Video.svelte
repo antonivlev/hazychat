@@ -1,38 +1,22 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import { onMount } from 'svelte';
 
-	const dispatch = createEventDispatcher();
+	let addStreamToVid = (stream) => {
+		if (stream) {
+			let vid = document.querySelector('#'+id+' video');
+			vid.srcObject = stream;
+			vid.onloadedmetadata = () => vid.play();
+		}
+	}
 
 	export let id = 'some-id';	
 	export let me = false;
+	export let stream = {};
 
-	// if me, display my video, modify occupants on call
-	if (me) {
-		// display my video
-		navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-			.then(stream => {
-				addStreamToVid(stream);
-			})
-			.catch(err => console.log(err));
-
-		setTimeout(() => {
-			// add occupant on call
-			console.log('dispatching');
-			dispatch('incoming', {
-				id: 'some-id',
-				me: false,
-			})
-		}, 1000);
-	}
-
-	// if not me, call peer, display his video
-
-
-	let addStreamToVid = (stream) => {
-		let vid = document.querySelector('#'+id+' video');
-		vid.srcObject = stream;
-		vid.onloadedmetadata = () => vid.play();
-	}
+	onMount(() => {
+		addStreamToVid(stream);
+	});
 </script>
 
 <div id={id} class={me ? 'me' : ''}>
