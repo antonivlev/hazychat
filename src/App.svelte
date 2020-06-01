@@ -11,8 +11,9 @@
 	}
 
 	// Tries to connect to server at position. Creates peer if position available.
-	const tryPosition = async (position, roomURL, server) => {
-		return await new Promise( (resolve, reject) => {
+	// returns occupantList, myPeer
+	const tryPosition = (position, roomURL, server) => {
+		return new Promise( (resolve, reject) => {
 			const occupantID = generateID(position, roomURL);
 			const peer = new Peer(occupantID, server)
 				.on('open', async id => {
@@ -33,24 +34,12 @@
 		});
 	}
 
-	const callOccupant = async (myPeer, myStream, id) => {
-		return await new Promise( (resolve, reject) => {
-			myPeer.call(id, myStream)
-				.on('stream', (remoteStream) => {
-					resolve(remoteStream);
-				})
-				.on('error', err => {
-					console.log(err);
-					reject({});
-				});
-		});
-	}
-
 	const connectToRoom = async (roomURL, server) => {
 		let occupants = [];
 		let position = 0;
 
 		// todo: make try position recursive, get peer at the end
+		// todo: check positions past self....how do I know if reached end? 
 		let occupant = await tryPosition(position, roomURL, server)
 		// if error is not nil, display here
 		while (!occupant.me) {
@@ -70,7 +59,7 @@
 	}
 
 	const setupPeer = async (peer) => {
-		const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+		const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
 
 		// setup call answering behaviour
 		peer.on('call', call => {
@@ -82,10 +71,6 @@
 	}
 
 	const addCallerStream = async (id, stream) => {
-		stream.onremovetrack = () => {
-			console.log('track rmved');
-		}
-
 		const currentOccupants = await occupants;
 		
 		const exisitngCaller = currentOccupants.find(occ => occ.id === id);
