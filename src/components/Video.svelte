@@ -10,11 +10,13 @@
 	onMount(() => {
 		vid.srcObject = stream;
 		vid.onloadedmetadata = () => vid.play();
+		console.log('mount: ', stream);
 	});
 
 	afterUpdate(() => {
 		vid.srcObject = stream;
 		vid.onloadedmetadata = () => vid.play();
+		console.log('update: ', stream);
 	});
 </script>
 

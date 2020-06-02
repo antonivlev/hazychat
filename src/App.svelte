@@ -18,14 +18,12 @@
 			const peer = new Peer(occupantID, server)
 				.on('open', async id => {
 					// id available
-					myPeer = peer;
-					myStream = await setupPeer(myPeer);
-					resolve( {id: occupantID, me: true, stream: myStream} );
+					resolve( {id: occupantID, myPeer: peer } );
 				})
 				.on('error', err => {
 					if (err.message.includes('is taken')) {
 						// id not available
-						resolve( {id: occupantID, me: false, stream: null} );
+						resolve( {id: occupantID, myPeer: null } );
 					} else {
 						// other error
 						reject( {message: err + ' position: ' + position + ', id: ' + occupantID} );
@@ -38,23 +36,25 @@
 		let occupants = [];
 		let position = 0;
 
-		// todo: make try position recursive, get peer at the end
-		// todo: check positions past self....how do I know if reached end? 
 		let occupant = await tryPosition(position, roomURL, server)
-		// if error is not nil, display here
-		while (!occupant.me) {
+		while (!occupant.myPeer) {
 			occupants.push(occupant);
 			position += 1;
 			occupant = await tryPosition(position, roomURL, server);
 		}
+
+		// set up call accepting and get my stream
+		let myStream = await setupPeer(occupant.myPeer);
+		occupant.stream = myStream;
 		occupants.push(occupant);
 
 		// call everyone
 		occupants.filter(occ => !occ.me).map( occ => {
-			const call = myPeer.call(occ.id, myStream);
+			const call = occupant.myPeer.call(occ.id, myStream);
 			call.on( 'stream', remoteStream => addCallerStream(occ.id, remoteStream) );
 		});
 
+		console.log(occupants);
 		return occupants;
 	}
 
@@ -95,8 +95,6 @@
 		path: '/myapp'
 	}
 	let occupants = [];
-	let myPeer = {};
-	let myStream = {};
 
 	occupants = connectToRoom(roomURL, server);
 </script>
@@ -108,7 +106,7 @@
 	{:then occupants}
 		
 		{#each occupants as occupant}
-			<Video id={occupant.id} me={occupant.me} stream={occupant.stream} />
+			<Video id={occupant.id} me={occupant.myPeer} stream={occupant.stream} />
 		{/each}
 		
 	{:catch error}
