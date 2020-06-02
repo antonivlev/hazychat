@@ -48,13 +48,12 @@
 		occupant.stream = myStream;
 		occupants.push(occupant);
 
-		// call everyone
-		occupants.filter(occ => !occ.me).map( occ => {
+		// call everyone but me
+		occupants.filter(occ => !occ.myPeer).map( occ => {
 			const call = occupant.myPeer.call(occ.id, myStream);
 			call.on( 'stream', remoteStream => addCallerStream(occ.id, remoteStream) );
 		});
 
-		console.log(occupants);
 		return occupants;
 	}
 
@@ -71,6 +70,7 @@
 	}
 
 	const addCallerStream = async (id, stream) => {
+		// todo: make side effects more transparent
 		const currentOccupants = await occupants;
 		
 		const exisitngCaller = currentOccupants.find(occ => occ.id === id);
