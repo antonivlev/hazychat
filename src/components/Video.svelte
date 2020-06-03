@@ -18,7 +18,7 @@
 	});
 </script>
 
-<div id={id} class={me ? 'me' : ''}>
+<div id={id} class={me ? 'me' : ''} style={stream ? '' : 'display: none'}>
 	{id}
 	<video bind:this={vid} muted={me ? true : false}></video>
 </div>

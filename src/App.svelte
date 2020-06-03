@@ -18,12 +18,12 @@
 			const peer = new Peer(occupantID, server)
 				.on('open', async id => {
 					// id available
-					resolve( {id: occupantID, myPeer: peer } );
+					resolve( {id: occupantID, myPeer: peer} );
 				})
 				.on('error', err => {
 					if (err.message.includes('is taken')) {
 						// id not available
-						resolve( {id: occupantID, myPeer: null } );
+						resolve( {id: occupantID, myPeer: null} );
 					} else {
 						// other error
 						reject( {message: err + ' position: ' + position + ', id: ' + occupantID} );
@@ -36,21 +36,27 @@
 		let occupants = [];
 		let position = 0;
 
-		let occupant = await tryPosition(position, roomURL, server)
-		while (!occupant.myPeer) {
+		let idFound = false;
+
+		while (position < 5) {
+			// once id is found, stop taking other positions 
+			const occupant = idFound ? {id: generateID(position, roomURL), myPeer: null} : await tryPosition(position, roomURL, server);
+			if (occupant.myPeer) {
+				idFound = true;
+			}
 			occupants.push(occupant);
 			position += 1;
-			occupant = await tryPosition(position, roomURL, server);
 		}
+		const me = occupants.find(occ => occ.myPeer);
+		console.log(occupants);
 
 		// set up call accepting and get my stream
-		let myStream = await setupPeer(occupant.myPeer);
-		occupant.stream = myStream;
-		occupants.push(occupant);
+		let myStream = await setupPeer(me.myPeer);
+		me.stream = myStream;
 
 		// call everyone but me
 		occupants.filter(occ => !occ.myPeer).map( occ => {
-			const call = occupant.myPeer.call(occ.id, myStream);
+			const call = me.myPeer.call(occ.id, myStream);
 			call.on( 'stream', remoteStream => addCallerStream(occ.id, remoteStream) );
 		});
 
