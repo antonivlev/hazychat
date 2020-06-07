@@ -38,7 +38,7 @@
 
 		let idFound = false;
 
-		while (position < 5) {
+		while (position < 20) {
 			// once id is found, stop taking other positions 
 			const occupant = idFound ? {id: generateID(position, roomURL), myPeer: null} : await tryPosition(position, roomURL, server);
 			if (occupant.myPeer) {
@@ -57,14 +57,14 @@
 		// call everyone but me
 		occupants.filter(occ => !occ.myPeer).map( occ => {
 			const call = me.myPeer.call(occ.id, myStream);
-			call.on( 'stream', remoteStream => addCallerStream(occ.id, remoteStream) );
+			call.on('stream', remoteStream => addCallerStream(occ.id, remoteStream));
 		});
 
 		return occupants;
 	}
 
 	const setupPeer = async (peer) => {
-		const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+		const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 
 		// setup call answering behaviour
 		peer.on('call', call => {
@@ -96,8 +96,8 @@
 
 	const roomURL =  window.location.pathname;
 	const server = {
-		host: 'localhost',
-		port: '9000',
+		host: '030542a71cf2.ngrok.io',
+		port: '',
 		path: '/myapp'
 	}
 	let occupants = [];
