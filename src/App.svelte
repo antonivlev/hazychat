@@ -2,7 +2,6 @@
 	import seedrandom from 'seedrandom';
 
 	import Video from './components/Video.svelte'
-	import Test from './components/Test.svelte'
 
 	const generateID = (position, roomURL) => {
 		const rng = seedrandom(roomURL+position);
@@ -16,7 +15,7 @@
 		return new Promise( (resolve, reject) => {
 			const occupantID = generateID(position, roomURL);
 			const peer = new Peer(occupantID, server)
-				.on('open', async id => {
+				.on('open', id => {
 					// id available
 					resolve( {id: occupantID, myPeer: peer} );
 				})
@@ -38,7 +37,7 @@
 
 		let idFound = false;
 
-		while (position < 20) {
+		while (position < 10) {
 			// once id is found, stop taking other positions 
 			const occupant = idFound ? {id: generateID(position, roomURL), myPeer: null} : await tryPosition(position, roomURL, server);
 			if (occupant.myPeer) {
@@ -48,7 +47,6 @@
 			position += 1;
 		}
 		const me = occupants.find(occ => occ.myPeer);
-		console.log(occupants);
 
 		// set up call accepting and get my stream
 		let myStream = await setupPeer(me.myPeer);
@@ -68,6 +66,7 @@
 
 		// setup call answering behaviour
 		peer.on('call', call => {
+			// answer with stream from my canvas
 			call.answer(stream);
 			call.on( 'stream', remoteStream => addCallerStream(call.peer, remoteStream) );
 		});
@@ -96,8 +95,8 @@
 
 	const roomURL =  window.location.pathname;
 	const server = {
-		host: '030542a71cf2.ngrok.io',
-		port: '',
+		host: 'localhost',
+		port: '9000',
 		path: '/myapp'
 	}
 	let occupants = [];
