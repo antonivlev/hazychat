@@ -2,28 +2,26 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, afterUpdate } from 'svelte';
 
-	export let id = 'some-id';	
+	export let position = 0;	
 	export let me = false;
-	export let stream;
+	export let myPeer = null;
 
 	let t = 0;
 	let vid;
 	let canvas;
+
 	onMount(() => {
-		vid.srcObject = stream;
-		vid.onloadedmetadata = () => vid.play();
-	});
-
-	afterUpdate(() => {
-		vid.srcObject = stream;
-		vid.onloadedmetadata = () => vid.play();
-
-		if (stream && me) {
-			addEffect(vid, canvas);
+		if (me) {
+			navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(startVideo)
 		}
-
-		// console.log(canvas.captureStream(24))
 	});
+
+	const startVideo = (stream) => {
+		vid.srcObject = stream;
+		vid.onloadedmetadata = () => vid.play();
+
+		addEffect(vid, canvas);
+	}
 
 	const addEffect = (video, canvas) => {
 		let seriously = new Seriously();
@@ -41,14 +39,12 @@
 		effect.source = me;
 		target.source = effect;
 		seriously.go();
-
-		// dispatch stream event
 	}
 </script>
 
-<div style={stream ? '' : 'display: none'} id={id} class={me ? 'me' : ''}>
-	<video style={me ? 'display: none' : ''} bind:this={vid} muted={me ? true : false}></video>
-	<canvas style={me ? '' : 'display: none'} width=480 height=480 bind:this={canvas}></canvas>
+<div class={me ? 'me' : ''}>
+	<video width=200 height=200 bind:this={vid} muted={me ? true : false}></video>
+	<canvas width=200 height=200 bind:this={canvas}></canvas>
 </div>
 
 <style>

@@ -1,93 +1,65 @@
 <script>
-	import seedrandom from 'seedrandom';
-
 	import Video from './components/Video.svelte'
 
-	const generateID = (position, roomURL) => {
-		const rng = seedrandom(roomURL+position);
-		const id = rng();
-		return id.toString(36).substring(2, 12);
-	}
+	import { connectSelfAtPostion } from './services/connections';
 
-	// Tries to connect to server at position. Creates peer if position available.
-	// returns occupantList, myPeer
-	const tryPosition = (position, roomURL, server) => {
-		return new Promise( (resolve, reject) => {
-			const occupantID = generateID(position, roomURL);
-			const peer = new Peer(occupantID, server)
-				.on('open', id => {
-					// id available
-					resolve( {id: occupantID, myPeer: peer} );
-				})
-				.on('error', err => {
-					if (err.message.includes('is taken')) {
-						// id not available
-						resolve( {id: occupantID, myPeer: null} );
-					} else {
-						// other error
-						reject( {message: err + ' position: ' + position + ', id: ' + occupantID} );
-					}
-				});
-		});
-	}
+	// const connectToRoom = async (roomURL, server) => {
+	// 	let occupants = [];
+	// 	let position = 0;
 
-	const connectToRoom = async (roomURL, server) => {
-		let occupants = [];
-		let position = 0;
+	// 	let idFound = false;
 
-		let idFound = false;
+	// 	while (position < 10) {
+	// 		// once id is found, stop taking other positions 
+	// 		const occupant = idFound ? {id: generateID(position, roomURL), myPeer: null} : await tryPosition(position, roomURL, server);
+	// 		if (occupant.myPeer) {
+	// 			idFound = true;
+	// 		}
+	// 		occupants.push(occupant);
+	// 		position += 1;
+	// 	}
+	// 	const me = occupants.find(occ => occ.myPeer);
 
-		while (position < 10) {
-			// once id is found, stop taking other positions 
-			const occupant = idFound ? {id: generateID(position, roomURL), myPeer: null} : await tryPosition(position, roomURL, server);
-			if (occupant.myPeer) {
-				idFound = true;
-			}
-			occupants.push(occupant);
-			position += 1;
-		}
-		const me = occupants.find(occ => occ.myPeer);
+	// 	// set up call accepting and get my stream
+	// 	let myStream = await setupPeer(me.myPeer);
+	// 	me.stream = myStream;
 
-		// set up call accepting and get my stream
-		let myStream = await setupPeer(me.myPeer);
-		me.stream = myStream;
+	// 	// call everyone but me
+	// 	occupants.filter(occ => !occ.myPeer).map( occ => {
+	// 		const call = me.myPeer.call(occ.id, myStream);
+	// 		call.on('stream', remoteStream => addCallerStream(occ.id, remoteStream));
+	// 	});
 
-		// call everyone but me
-		occupants.filter(occ => !occ.myPeer).map( occ => {
-			const call = me.myPeer.call(occ.id, myStream);
-			call.on('stream', remoteStream => addCallerStream(occ.id, remoteStream));
-		});
+	// 	return occupants;
+	// }
 
-		return occupants;
-	}
+	// const setupPeer = async (peer) => {
+	// 	const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 
-	const setupPeer = async (peer) => {
-		const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+	// 	// setup call answering behaviour
+	// 	peer.on('call', call => {
+	// 		// answer with stream from my canvas
+	// 		call.answer(stream);
+	// 		call.on( 'stream', remoteStream => addCallerStream(call.peer, remoteStream) );
+	// 	});
 
-		// setup call answering behaviour
-		peer.on('call', call => {
-			// answer with stream from my canvas
-			call.answer(stream);
-			call.on( 'stream', remoteStream => addCallerStream(call.peer, remoteStream) );
-		});
+	// 	return stream;
+	// }
 
-		return stream;
-	}
-
-	const addCallerStream = async (id, stream) => {
-		// todo: make side effects more transparent
-		const currentOccupants = await occupants;
+	// const addCallerStream = async (id, stream) => {
+	// 	// todo: make side effects more transparent
+	// 	const currentOccupants = await occupants;
 		
-		const exisitngCaller = currentOccupants.find(occ => occ.id === id);
-		if (exisitngCaller) {
-			exisitngCaller.stream = stream;
-			occupants = [...currentOccupants];
-			return;
-		}
+	// 	const exisitngCaller = currentOccupants.find(occ => occ.id === id);
+	// 	if (exisitngCaller) {
+	// 		exisitngCaller.stream = stream;
+	// 		occupants = [...currentOccupants];
+	// 		return;
+	// 	}
 
-		// else, add occupant
-		occupants = [...currentOccupants, {id: id, me: false, stream: stream}];
-	}
+	// 	// else, add occupant
+	// 	occupants = [...currentOccupants, {id: id, me: false, stream: stream}];
+	// }
 
 	if (window.location.pathname === '/') {
 		window.history.pushState('', '', '/'+Math.random().toString(36).substring(2, 12));
@@ -99,19 +71,26 @@
 		port: '9000',
 		path: '/myapp'
 	}
-	let occupants = [];
 
-	occupants = connectToRoom(roomURL, server);
+	// Returns peer instance and position connected at
+	const connectSelf = async (roomURL, server) => {
+		for (let position=0; position<10; position++) {
+			let result = await connectSelfAtPostion(position, roomURL, server);
+			if (result.myPeer) {
+				return result;
+			}
+		}
+		throw new Error("room capacity reached");
+	}
 </script>
 
 <div>
-	<!-- <Test /> -->
-	{#await occupants}
+	{#await connectSelf(roomURL, server)}
 		<p>waiting...</p>
-	{:then occupants}
+	{:then connection}
 		
-		{#each occupants as occupant}
-			<Video id={occupant.id} me={occupant.myPeer} stream={occupant.stream} />
+		{#each [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as position}
+			<Video position={position} me={position === connection.myPosition} myPeer={connection.myPeer} />
 		{/each}
 		
 	{:catch error}
