@@ -15,7 +15,7 @@ export const connectSelfAtPostion = (position, roomURL, server) => {
 		const peer = new Peer(occupantID, server)
 			.on('open', id => {
 				// id available
-				resolve( {myPeer: peer, myPosition: position} );
+				resolve( {peer: peer, position: position} );
 			})
 			.on('error', err => {
 				if (err.message.includes('is taken')) {
