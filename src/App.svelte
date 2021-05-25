@@ -15,9 +15,9 @@
 
 	const roomURL =  window.location.pathname;
 	const server = {
-		host: 'localhost',
-		port: '9000',
-		path: '/myapp'
+		host: 'obscure-bastion-48493.herokuapp.com',
+		port: '',
+		path: '/'
 	}
 
 	let vid;
